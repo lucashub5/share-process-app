@@ -10,6 +10,7 @@ export default function Home() {
   const [selectedClient, setSelectedClient] = useState('')
   const [selectedProcess, setSelectedProcess] = useState<SubProcess | null>(null)
   const [htmlContent, setHtmlContent] = useState<string>('')
+  const [searchTerm, setSearchTerm] = useState<string>('')
 
   const clients = ['Sony / MX']
 
@@ -23,6 +24,8 @@ export default function Home() {
     }
   }, [selectedProcess])
 
+
+  
   return (
     <div className="flex flex-col h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 overflow-hidden">
       {/* Header */}
@@ -32,6 +35,8 @@ export default function Home() {
           <input
             type="text"
             placeholder="Buscar procesos..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-3 bg-neutral-800/50 border border-neutral-700/50 rounded-xl text-sm text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
           />
         </div>
@@ -65,7 +70,7 @@ export default function Home() {
             </h1>
           </div>
           <div className="flex-1 overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-neutral-700 scrollbar-track-transparent">
-            <ProcessList onSelectProcess={setSelectedProcess} />
+            <ProcessList onSelectProcess={setSelectedProcess} searchTerm={searchTerm} />
           </div>
         </aside>
 
