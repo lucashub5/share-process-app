@@ -1,11 +1,12 @@
 @import "tailwindcss";
 
 * {
-    font-family: Arial, Helvetica, sans-serif
+    font-family: Arial, Helvetica, sans-serif;
 }
 
 *::-webkit-scrollbar {
-    width: 5px;              
+    width: 5px;    
+    height: 0px;       
 }
 
 *::-webkit-scrollbar-thumb {

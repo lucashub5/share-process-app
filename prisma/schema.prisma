@@ -1,0 +1,34 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Client {
+  id          String   @id @default(cuid())
+  name        String
+
+  processes   Process[]
+
+  @@map("clients")
+}
+
+model Process {
+  id          String   @id @default(cuid())
+  title       String
+  content     String?
+  date        DateTime @default(now())
+
+  clientId    String
+  client      Client   @relation(fields: [clientId], references: [id])
+
+  parentId    String?
+  parent      Process?    @relation("SubProcesses", fields: [parentId], references: [id])
+  children    Process[]   @relation("SubProcesses")
+
+  @@map("processes")
+}

@@ -8,15 +8,19 @@ export type ProcessEditorHandle = {
   getContent: () => string;
 };
 
-const ProcessEditor = forwardRef<ProcessEditorHandle>((_, ref) => {
+type Props = {
+  initialContent: string;
+};
+
+const ProcessEditor = forwardRef<ProcessEditorHandle, Props>(({ initialContent }, ref) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const quillRef = useRef<Quill | null>(null);
 
   useEffect(() => {
     const editorEl = editorRef.current;
-  
+
     if (!editorEl) return;
-  
+
     const style = document.createElement('style');
     style.innerHTML = `
       .ql-toolbar.ql-snow {
@@ -31,7 +35,7 @@ const ProcessEditor = forwardRef<ProcessEditorHandle>((_, ref) => {
       }
     `;
     document.head.appendChild(style);
-  
+
     if (!quillRef.current) {
       quillRef.current = new Quill(editorEl, {
         theme: 'snow',
@@ -46,12 +50,17 @@ const ProcessEditor = forwardRef<ProcessEditorHandle>((_, ref) => {
         },
         placeholder: 'Describe el proceso...',
       });
+
+      // Establecer el contenido HTML inicial
+      if (initialContent) {
+        quillRef.current.root.innerHTML = initialContent;
+      }
     }
 
     return () => {
       document.head.removeChild(style);
     };
-  }, []);  
+  }, [initialContent]); // ⚠️ importante: depende de initialContent
 
   useImperativeHandle(ref, () => ({
     getContent: () => {
