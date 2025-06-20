@@ -1,0 +1,42 @@
+# 📁 Share Process App
+
+Aplicación de gestión de procesos con soporte para múltiples clientes.
+
+---
+
+## 🛠️ Setup del Proyecto
+
+### 1. Instalar dependencias y generar cliente Prisma
+
+npm install
+npx prisma generate
+
+### 2. Activar Docker (en Linux/WSL)
+
+systemctl --user start docker-desktop
+
+### 3. Levantar contenedor PostgreSQL para desarrollo
+
+docker run --name postgres-db \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_PASSWORD=chan_db_567 \
+  -e POSTGRES_DB=share_process_app \
+  -p 5432:5432 \
+  -d postgres
+
+.env para dev
+
+DATABASE_URL="postgresql://postgres:chan_db_567@localhost:5432/share_process_app?schema=public"
+
+### 4. Sincronizar base de datos
+
+npx prisma db push
+
+o
+
+npx prisma migrate dev --name init
+
+### 5. Levantar contenedor en caso de estar creado
+
+docker ps
+docker start postgres-db

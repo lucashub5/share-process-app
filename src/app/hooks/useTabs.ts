@@ -5,11 +5,11 @@ export function useTabs() {
   const [openProcess, setOpenProcess] = useState<Process | null>(null);
   const [openTabs, setOpenTabs] = useState<Process[]>([]);
   const [selectedProcess, setSelectedProcess] = useState<Process | null>(null);
-  const [editingStates, setEditingStates] = useState<Record<number, boolean>>({});
-  const editorRefs = useRef<Record<number, ProcessEditorHandle | null>>({});
+  const [editingStates, setEditingStates] = useState<Record<string, boolean>>({});
+  const editorRefs = useRef<Record<string, ProcessEditorHandle | null>>({});
 
-  const isEditing = (id: number) => editingStates[id] || false;
-  const setIsEditing = (id: number, value: boolean) => {
+  const isEditing = (id: string) => editingStates[id] || false;
+  const setIsEditing = (id: string, value: boolean) => {
     setEditingStates((prev) => ({ ...prev, [id]: value }));
   };
 
@@ -24,7 +24,7 @@ export function useTabs() {
     });
   };
 
-  const closeTab = (id: number) => {
+  const closeTab = (id: string) => {
     setOpenTabs((prev) => {
       const newTabs = prev.filter((p) => p.id !== id);
 
@@ -45,7 +45,7 @@ export function useTabs() {
 
     setEditingStates((prev) => {
       const rest = Object.fromEntries(
-        Object.entries(prev).filter(([key]) => Number(key) !== id)
+        Object.entries(prev).filter(([key]) => key !== id)
       );
       return rest;
     });

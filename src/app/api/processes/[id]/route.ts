@@ -7,8 +7,8 @@ export async function DELETE(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await params; // <-- aquí await
-
+  const { id } = await params;
+  
   const url = new URL(req.url);
   const clientId = url.searchParams.get('clientId');
 

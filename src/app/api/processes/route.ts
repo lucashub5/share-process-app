@@ -1,12 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@/generated/prisma';
-
-export type ProcessNode = {
-  id: string;
-  title: string;
-  content: string | null;
-  childrens: ProcessNode[];
-};
+import { DocumentType, Process } from '@/app/types';
 
 const prisma = new PrismaClient();
 
@@ -21,16 +15,30 @@ export async function GET(req: NextRequest) {
 
     const rootProcesses = await prisma.process.findMany({
       where: { parentId: null, clientId },
+      select: {
+        id: true,
+        title: true,
+        content: true,
+        type: true, 
+        parentId: true
+      },
     });
 
     const buildTree = async (
-      process: { id: string; title: string; content: string | null }
-    ): Promise<ProcessNode> => {
+      process: { id: string; title: string; content: string | null; type: DocumentType, parentId: string | null }
+    ): Promise<Process> => {
       const children = await prisma.process.findMany({
         where: { parentId: process.id },
+        select: {
+          id: true,
+          title: true,
+          content: true,
+          type: true,
+          parentId: true
+        },
       });
 
-      const childrens: ProcessNode[] = await Promise.all(
+      const childrens: Process[] = await Promise.all(
         children.map((child) => buildTree(child))
       );
 
@@ -38,6 +46,8 @@ export async function GET(req: NextRequest) {
         id: process.id,
         title: process.title,
         content: process.content,
+        type: process.type, 
+        parentId: process.parentId,
         childrens,
       };
     };
@@ -54,9 +64,12 @@ export async function GET(req: NextRequest) {
 // POST - crear proceso
 export async function POST(req: NextRequest) {
   try {
-    const { title, content, parentId, clientId } = await req.json();
+    const { title, content, parentId, type } = await req.json();
 
-    if (!title || !clientId) {
+    const url = new URL(req.url);
+    const clientId = url.searchParams.get('clientId');
+
+    if (!title || !clientId || !type) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
@@ -66,6 +79,7 @@ export async function POST(req: NextRequest) {
         content,
         parentId: parentId || null,
         clientId,
+        type,
       },
     });
 
@@ -73,6 +87,7 @@ export async function POST(req: NextRequest) {
       id: created.id,
       title: created.title,
       content: created.content,
+      type: created.type,
       childrens: [],
     });
   } catch (error) {

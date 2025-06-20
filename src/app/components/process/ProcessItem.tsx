@@ -6,33 +6,29 @@ import {
   Loader2,
   Save,
   X,
+  AlignLeft,
 } from "lucide-react";
-import { Process } from "@/app/types";
+import { DocumentType, Process } from "@/app/types";
 import { useEffect, useRef } from "react";
 
 interface ProcessItemProps {
   item: Process;
   level?: number;
-  expandedItems: Set<string | number>;
-  toggleExpanded: (id: string | number) => void;
-  editingItem: string | number | null;
-  setEditingItem: React.Dispatch<React.SetStateAction<string | number | null>>;
-  editForm: EditForm;
-  setEditForm: React.Dispatch<React.SetStateAction<EditForm>>;
-  saveEdit: (id: string | number) => Promise<void>;
+  expandedItems: Set<string>;
+  toggleExpanded: (id: string) => void;
+  editForm: Process | null;
+  setEditForm: React.Dispatch<React.SetStateAction<Process | null>>;
+  saveEdit: (id: string) => Promise<void>;
   cancelEdit: () => void;
-  deleteProcess: (id: string | number) => Promise<void>;
-  addSubprocess: (parentId?: string | number | null, document?: boolean) => Promise<void>;
+  deleteProcess: (id: string) => Promise<void>;
+  addSubprocess: (parentId: string | null, type: DocumentType) => Promise<void>;
   actionLoading: string | number | null;
   openProcess: Process | null;
   setOpenProcess: React.Dispatch<React.SetStateAction<Process | null>>;
   selectedProcess: Process | null;
   setSelectedProcess: React.Dispatch<React.SetStateAction<Process | null>>;
-}
-
-interface EditForm {
-  title: string;
-  content: string | null;
+  configOpenId: string | number | null;
+  setConfigOpenId: React.Dispatch<React.SetStateAction<string | number | null>>;
 }
 
 export default function ProcessItem({
@@ -40,8 +36,6 @@ export default function ProcessItem({
   level = 0,
   expandedItems,
   toggleExpanded,
-  editingItem,
-  setEditingItem,
   editForm,
   setEditForm,
   saveEdit,
@@ -53,12 +47,14 @@ export default function ProcessItem({
   setOpenProcess,
   selectedProcess,
   setSelectedProcess,
+  configOpenId,
+  setConfigOpenId,
 }: ProcessItemProps) {
   const isExpanded = expandedItems.has(item.id);
-  const hasChildren = item.childrens && item.childrens.length > 0;
-  const isEditing = editingItem === item.id;
+  const hasChildren = item.childrens?.length > 0;
+  const isEditing = editForm?.id === item.id;
   const isLoading = actionLoading === item.id;
-  const hasContent = item.content && item.content.trim() !== "";
+  const isDocument = item.type === "file";
   const isSelected = selectedProcess?.id === item.id;
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -66,90 +62,87 @@ export default function ProcessItem({
     if (isEditing && inputRef.current) {
       const input = inputRef.current;
       input.focus();
-      // Coloca el cursor al final del texto
       input.setSelectionRange(input.value.length, input.value.length);
     }
   }, [isEditing]);
 
   const onClickContainer = () => {
     if (hasChildren) toggleExpanded(item.id);
-    else if (hasContent) setOpenProcess(item);
+    else if (isDocument) setOpenProcess(item);
     setSelectedProcess(item);
   };
 
   return (
-    <div className="w-full">
+    <div className="w-full relative">
       <div
-        className={`flex items-center gap-1 transition-all duration-200 cursor-pointer
-          ${isSelected ? "bg-blue-200" : "hover:bg-gray-50 border-transparent"}
+        className={`flex items-center gap-1 transition-all duration-200 cursor-pointer rounded-lg mx-3
+          ${isSelected && !editForm ? "bg-gray-200" : "hover:bg-gray-100"}
         `}
-        style={{ paddingLeft: `${20 * level}px` }}
+        style={{ paddingLeft: `${21 * level}px` }}
         onClick={onClickContainer}
       >
-        <div className={`flex ${level > 0 ? "border-l-1" : ""} border-neutral-400 `}>
-        {hasChildren ? (
-          <div className="flex items-center justify-center">
-            {isExpanded ? (
-              <ChevronDown className="w-4 h-4 text-gray-600" />
-            ) : (
-              <ChevronRight className="w-4 h-4 text-gray-600" />
-            )}
+        <div className={`pl-4 py-1.5 w-full flex items-center ${level > 0 ? "border-l-1" : ""} border-neutral-200 p-0.25`}>
+          <div className="flex justify-center items-center">
+            {(item.type === "file" && isEditing) ? (
+              <AlignLeft className="w-3 h-3 text-gray-500" />
+            ) : hasChildren ? (
+              isExpanded ? (
+                <ChevronDown className="w-4 h-4 text-gray-600" />
+              ) : (
+                <ChevronRight className="w-4 h-4 text-gray-600" />
+              )
+            ) : null}
           </div>
-        ) : (
-          <span className="w-4" />
-        )}
 
-        <div className="flex-1 min-w-0 select-text" >
-          {isEditing ? (
-            <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
-              <input
-                ref={inputRef}
-                type="text"
-                value={editForm.title}
-                onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-                className="w-full px-2 py-1 rounded text-xs outline-none ring-0 focus:outline-none focus:ring-0"
-                placeholder="Título"
-              />
-            </div>
-          ) : (
-            <div>
-              <div className="flex items-center gap-2">
+          <div className="flex-1 min-w-0 select-text" data-ignore-blur-id={item.id}>
+            {isEditing ? (
+              <div className="space-y-2 bg-blue-200 outline-1 outline-blue-500 rounded-sm" onClick={(e) => e.stopPropagation()}>
+                <input
+                  data-temp-id={item.id.startsWith("temp") ? item.id : undefined}
+                  ref={inputRef}
+                  type="text"
+                  value={editForm!.title}
+                  onChange={(e) => setEditForm({ ...editForm!, title: e.target.value })}
+                  className="w-full p-0.5 text-sm font-medium outline-none z-12"
+                />
+              </div>
+            ) : (
+              <div className="flex gap-2 w-full">
                 <h3
-                  className={`text-sm font-medium truncate select-none ${
-                    hasContent ? "text-blue-700" : "text-gray-900"
+                  className={`p-0.5 text-sm font-medium truncate select-none ${
+                    isDocument ? "text-blue-700" : "text-gray-900"
                   }`}
                 >
                   {item.title}
                 </h3>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
 
-        <div className="flex items-center gap-0.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-          {isEditing && (
-            <>
-              <button
-                onClick={() => saveEdit(item.id)}
-                disabled={isLoading || !editForm.title.trim()}
-                className="p-1 text-green-600 hover:bg-green-50 rounded transition-colors disabled:opacity-50"
-              >
-                {isLoading ? (
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                ) : (
-                  <Save className="w-3 h-3" />
-                )}
-              </button>
-              <button
-                onClick={cancelEdit}
-                disabled={isLoading}
-                className="p-1 text-gray-600 hover:bg-gray-100 rounded transition-colors disabled:opacity-50"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            </>
-          )}
-        </div>
+          <div className="flex gap-0.5 flex-shrink-0 px-1" onClick={(e) => e.stopPropagation()}>
+            {isEditing && (
+              <>
+                <button
+                  onClick={() => saveEdit(item.id)}
+                  disabled={isLoading || !editForm!.title.trim()}
+                  className="p-1 text-green-600 hover:bg-green-50 rounded transition-colors disabled:opacity-50"
+                >
+                  {isLoading ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <Save className="w-3 h-3" />
+                  )}
+                </button>
+                <button
+                  onClick={cancelEdit}
+                  disabled={isLoading}
+                  className="p-1 text-gray-600 hover:bg-gray-100 rounded transition-colors disabled:opacity-50"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
@@ -162,8 +155,6 @@ export default function ProcessItem({
               level={level + 1}
               expandedItems={expandedItems}
               toggleExpanded={toggleExpanded}
-              editingItem={editingItem}
-              setEditingItem={setEditingItem}
               editForm={editForm}
               setEditForm={setEditForm}
               saveEdit={saveEdit}
@@ -175,6 +166,8 @@ export default function ProcessItem({
               setOpenProcess={setOpenProcess}
               selectedProcess={selectedProcess}
               setSelectedProcess={setSelectedProcess}
+              configOpenId={configOpenId}
+              setConfigOpenId={setConfigOpenId}
             />
           ))}
         </div>

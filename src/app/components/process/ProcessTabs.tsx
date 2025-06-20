@@ -6,9 +6,9 @@ import { Process } from '../../types';
 
 type Props = {
   tabs: Process[];
-  activeTabId: number | null;
+  activeTabId: string | null;
   onSelect: (process: Process) => void;
-  onClose: (id: number) => void;
+  onClose: (id: string) => void;
 };
 
 export default function ProcessTabs({ tabs, activeTabId, onSelect, onClose }: Props) {
@@ -62,7 +62,10 @@ export default function ProcessTabs({ tabs, activeTabId, onSelect, onClose }: Pr
   };
 
   return (
-    <div className="relative w-full flex items-center gap-2 select-none overflow-hidden">
+    <nav
+      aria-label="Process tabs"
+      className="px-3 relative w-full h-full flex items-center gap-2 select-none overflow-hidden bg-gray-50 rounded-xl"
+    >
       {/* Left shadow */}
       {canScrollLeft && (
         <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-blue-100 to-transparent z-10 animate-pulse" />
@@ -86,13 +89,13 @@ export default function ProcessTabs({ tabs, activeTabId, onSelect, onClose }: Pr
           {tabs.map((tab) => (
             <div
               key={tab.id}
-              className={`flex items-center px-4 py-1 rounded-md border cursor-pointer select-none
+              className={`flex items-center px-3 py-0.5 rounded-md cursor-pointer select-none text-gray-600
                 ${tab.id === activeTabId
-                  ? 'bg-blue-100 border-blue-500 text-blue-700'
-                  : 'bg-gray-100 border-gray-300 text-gray-600 hover:bg-gray-200'}`}
+                  ? 'bg-gray-200'
+                  : ' hover:bg-gray-100'}`}
               onClick={() => onSelect(tab)}
             >
-              <span className="mr-2 truncate max-w-[150px]">{tab.title}</span>
+              <span className="mr-2 truncate max-w-[150px] text-sm">{tab.title}</span>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -101,7 +104,7 @@ export default function ProcessTabs({ tabs, activeTabId, onSelect, onClose }: Pr
                 className="hover:text-red-500"
                 aria-label={`Close tab ${tab.title}`}
               >
-                <X size={14} />
+                <X size={13} />
               </button>
             </div>
           ))}
@@ -112,6 +115,6 @@ export default function ProcessTabs({ tabs, activeTabId, onSelect, onClose }: Pr
       {canScrollRight && (
         <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-blue-100 to-transparent z-10 animation-pulse" />
       )}
-    </div>
+    </nav>
   );
 }

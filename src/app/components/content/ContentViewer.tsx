@@ -1,6 +1,6 @@
 import { Pencil, Star } from "lucide-react";
 import { Process } from "../../types";
-import { useContentSterilizer } from "../../hooks/useContentSterilizer"; // ajusta la ruta según tu proyecto
+import { useContentSterilizer } from "../../hooks/useContentSterilizer";
 import { useState } from "react";
 
 interface Props {
@@ -20,35 +20,12 @@ export default function ContentViewer({ openProcess, onEdit }: Props) {
   };
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
-        <div>
-          <h2 className="text-xl font-semibold text-gray-900">{openProcess.title}</h2>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleSterilizeClick}
-            disabled={loading}
-            className="flex items-center gap-2 px-3 py-1.5 bg-yellow-400 hover:bg-yellow-500 text-gray-900 text-sm font-medium rounded-md transition disabled:opacity-50"
-            title="Esterilizar con IA"
-          >
-            <Star className="w-4 h-4" />
-            Esterilizar con IA
-          </button>
-          <button
-            onClick={() => {
-              setShowSterilized(false);
-              onEdit();
-            }}
-            className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition"
-          >
-            <Pencil className="w-4 h-4" />
-            Editar
-          </button>
-        </div>
+    <div className="h-full flex flex-col relative">
+      <div className="border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+        <h2 className="text-xl font-semibold text-gray-900 truncate">{openProcess.title}</h2>
       </div>
 
-      <div className="flex-1 overflow-y-auto bg-white">
+      <div className="flex-1 overflow-y-auto">
         <div className="max-w-4xl mx-auto p-6">
           <div className="prose prose-gray max-w-none">
             {showSterilized ? (
@@ -74,6 +51,30 @@ export default function ContentViewer({ openProcess, onEdit }: Props) {
             )}
           </div>
         </div>
+      </div>
+
+      {/* Botones fijos con estética gris */}
+      <div className="absolute bottom-4 right-4 flex gap-3">
+        <button
+          onClick={handleSterilizeClick}
+          disabled={loading}
+          className="flex items-center gap-1 px-3 py-2 bg-white rounded-md shadow transition-opacity opacity-60 hover:opacity-100 text-gray-800 text-sm font-medium disabled:opacity-40"
+          title="Esterilizar con IA"
+        >
+          <Star className="w-4 h-4" />
+          Esterilizar
+        </button>
+
+        <button
+          onClick={() => {
+            setShowSterilized(false);
+            onEdit();
+          }}
+          className="flex items-center gap-1 px-3 py-2 bg-white rounded-md shadow transition-opacity opacity-60 hover:opacity-100 text-gray-800 text-sm font-medium"
+          title="Editar"
+        >
+          <Pencil className="w-4 h-4" />
+        </button>
       </div>
     </div>
   );

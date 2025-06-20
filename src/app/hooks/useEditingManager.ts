@@ -2,12 +2,12 @@ import { useCallback } from "react";
 import { Process, ProcessEditorHandle } from "../types";
 
 type UseEditingManagerParams = {
-    editorRefs: React.RefObject<Record<number, ProcessEditorHandle | null>>;
+    editorRefs: React.RefObject<Record<string, ProcessEditorHandle | null>>;
     setProcesses: React.Dispatch<React.SetStateAction<Process[]>>;
     setOpenTabs: React.Dispatch<React.SetStateAction<Process[]>>;
     setOpenProcess: React.Dispatch<React.SetStateAction<Process | null>>;
     setSelectedProcess: React.Dispatch<React.SetStateAction<Process | null>>;
-    setIsEditing: (id: number, value: boolean) => void;
+    setIsEditing: (id: string, value: boolean) => void;
     updateProcessContent: (
         tab: Process,
         content: string,

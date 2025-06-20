@@ -3,7 +3,7 @@ import { Process } from "../types";
 
 export function useProcesses(clientId: string | null) {
   const [processes, setProcesses] = useState<Process[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (clientId) {

@@ -17,11 +17,18 @@ model Client {
   @@map("clients")
 }
 
+enum ProcessType {
+  file
+  folder
+}
+
 model Process {
   id          String   @id @default(cuid())
   title       String
   content     String?
   date        DateTime @default(now())
+
+  type        ProcessType @default(folder)
 
   clientId    String
   client      Client   @relation(fields: [clientId], references: [id])
