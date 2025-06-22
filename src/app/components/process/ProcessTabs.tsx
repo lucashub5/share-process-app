@@ -2,7 +2,7 @@
 
 import React, { useRef, useState, useEffect } from 'react';
 import { X } from 'lucide-react';
-import { Process } from '../../types';
+import { Process } from '../../../types/types';
 
 type Props = {
   tabs: Process[];

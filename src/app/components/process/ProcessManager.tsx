@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
-import { FolderPlus, FilePlus, Info, FileX, FolderX, PenLine, ChevronRight } from "lucide-react";
-import { DocumentType, Process } from "@/app/types";
+import { FolderPlus, FilePlus, Info, FileX, FolderX, PenLine, ChevronRight, Search } from "lucide-react";
+import { DocumentType, Process } from "@/types/types";
 import ProcessItem from "./ProcessItem";
 import { SkeletonLoaderProcessList } from "@/app/misc/SkeletonLoader";
 
@@ -51,7 +51,7 @@ export default function ProcessManager({
   toggleExpanded,
 }: Props) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [hoveredInputSearch, setHoveredInputSearch] = useState(false);
+  const [inputFocused, setInputFocused] = useState(false);
   const [showActionButtons, setShowActionButtons] = useState(false);
 
   // Filtra procesos recursivamente, como árbol
@@ -163,55 +163,62 @@ export default function ProcessManager({
 
   return (
     <div 
-      className="h-full flex flex-col bg-gray-50 border-r-1 border-gray-100"
+      className="h-full flex flex-col bg-gray-100 border-r-1 border-gray-200"
       onMouseEnter={() => setShowActionButtons(true)}
       onMouseLeave={() => setShowActionButtons(false)}
     >
       <div className="flex gap-1 justify-between items-center h-8 m-3">
         <div className="flex relative h-full">
-          <div>
-            <div className={`h-full transition-all duration-500 ease-in-out relative
-              ${hoveredInputSearch ? "w-45" : "w-20"}`}>
-              <input
-                type="text"
-                placeholder="Buscar"
-                className="pl-2 h-full w-full rounded-md border text-sm font-medium border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onMouseEnter={() => setHoveredInputSearch(true)}
-                onMouseLeave={() => setHoveredInputSearch(false)}
-              />
-              <div className="flex pr-1 absolute right-0 top-0 text-gray-500">
-                <ChevronRight className="w-4 h-8" strokeWidth={1.5}/>
-              </div>
-            </div>
-            {/* Lista lateral que aparece solo si hay búsqueda */}
-            {searchTerm.trim() && (
-              <div className="py-1 w-60 text-sm font-medium border border-gray-300 rounded-md bg-white shadow-lg absolute top-[110%] left-0 z-100 max-h-60 overflow-auto">
-                {flatFilteredProcesses.length === 0 ? (
-                  <p className="p-2 text-center text-gray-600">No hay resultados</p>
-                ) : (
-                  flatFilteredProcesses.map((proc) => {
-                    const titlePath = findTitlePathById(processes, proc.id)?.join(" > ") ?? proc.title;
-                    return (
-                      <div
-                        key={proc.id}
-                        onClick={() => onSelectProcessFromList(proc)}
-                        className={`px-2 cursor-pointer hover:bg-blue-100 ${
-                          selectedProcess?.id === proc.id ? "bg-blue-200 font-semibold" : ""
-                        }`}
-                      >
-                        <div>{proc.title}</div>
-                        <div className="text-xs text-gray-500">{titlePath}</div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            )}
+          <div
+            onClick={() => setInputFocused(true)}
+            onBlur={() => setInputFocused(false)}
+            className={`h-full relative transition-all duration-500 ease-in-out ${
+              inputFocused ? "w-full" : "w-15"
+            }`}
+          >
+            <input
+              type="text"
+              className="pl-2 peer h-full w-full rounded-md border text-sm font-medium border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <Search
+              className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4 pointer-events-none
+                        peer-focus:opacity-0 transition-opacity"
+              strokeWidth={1.5}
+            />
+            <ChevronRight
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4 pointer-events-none"
+              strokeWidth={1.5}
+            />
           </div>
+
+          {/* Lista lateral que aparece solo si hay búsqueda */}
+          {searchTerm.trim() && (
+            <div className="py-1 w-60 text-sm font-medium border border-gray-300 rounded-md bg-white shadow-lg absolute top-[110%] left-0 z-100 max-h-60 overflow-auto">
+              {flatFilteredProcesses.length === 0 ? (
+                <p className="p-2 text-center text-gray-600">No hay resultados</p>
+              ) : (
+                flatFilteredProcesses.map((proc) => {
+                  const titlePath = findTitlePathById(processes, proc.id)?.join(" > ") ?? proc.title;
+                  return (
+                    <div
+                      key={proc.id}
+                      onClick={() => onSelectProcessFromList(proc)}
+                      className={`px-2 cursor-pointer hover:bg-blue-100 ${
+                        selectedProcess?.id === proc.id ? "bg-blue-200 font-semibold" : ""
+                      }`}
+                    >
+                      <div>{proc.title}</div>
+                      <div className="text-xs text-gray-500">{titlePath}</div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )}
         </div>
-        {(showActionButtons && !hoveredInputSearch) && (
+        {(showActionButtons && !inputFocused) && (
           <div className="flex h-full">
             {selectedProcess && (
               <>
@@ -278,12 +285,6 @@ export default function ProcessManager({
           {processes.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-sm text-gray-600 mb-4">No hay procesos</p>
-              <button
-                onClick={() => addSubprocess(null, "folder")}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-              >
-                Crear Primer Proceso
-              </button>
             </div>
           ) : (
             processes.map((process) => (

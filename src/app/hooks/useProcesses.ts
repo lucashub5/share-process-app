@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Process } from "../types";
+import { Process } from "../../types/types";
 
 export function useProcesses(clientId: string | null) {
   const [processes, setProcesses] = useState<Process[]>([]);

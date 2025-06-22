@@ -12,3 +12,16 @@ export type Process = {
 export type ProcessEditorHandle = {
     getContent: () => string;
 };
+
+export type Client = {
+  id: string;
+  name: string;
+  creatorId: string;
+  emailAccess: string[];
+  accesses: {
+    userId: string;
+    canEdit: boolean;
+    canDelete: boolean;
+    canCreate: boolean;
+  }[];
+};

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@/generated/prisma';
-import { DocumentType, Process } from '@/app/types';
+import { DocumentType, Process } from '@/types/types';
 
 const prisma = new PrismaClient();
 

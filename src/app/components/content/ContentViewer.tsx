@@ -1,5 +1,5 @@
 import { Pencil, Star } from "lucide-react";
-import { Process } from "../../types";
+import { Process } from "../../../types/types";
 import { useContentSterilizer } from "../../hooks/useContentSterilizer";
 import { useState } from "react";
 

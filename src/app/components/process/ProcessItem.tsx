@@ -3,12 +3,10 @@
 import {
   ChevronDown,
   ChevronRight,
-  Loader2,
-  Save,
   X,
   AlignLeft,
 } from "lucide-react";
-import { DocumentType, Process } from "@/app/types";
+import { DocumentType, Process } from "@/types/types";
 import { useEffect, useRef } from "react";
 
 interface ProcessItemProps {
@@ -81,17 +79,19 @@ export default function ProcessItem({
         style={{ paddingLeft: `${21 * level}px` }}
         onClick={onClickContainer}
       >
-        <div className={`pl-4 py-1.5 w-full flex items-center ${level > 0 ? "border-l-1" : ""} border-neutral-200 p-0.25`}>
+        <div className={`pl-3 py-1.5 gap-1 w-full flex items-center ${level > 0 ? "border-l-1" : ""} border-neutral-200 p-0.25`}>
           <div className="flex justify-center items-center">
             {(item.type === "file" && isEditing) ? (
-              <AlignLeft className="w-3 h-3 text-gray-500" />
+              <div className="flex items-center justify-center w-4 h-4">
+                <AlignLeft className="w-3 h-3 text-gray-500" />
+              </div>
             ) : hasChildren ? (
               isExpanded ? (
                 <ChevronDown className="w-4 h-4 text-gray-600" />
               ) : (
                 <ChevronRight className="w-4 h-4 text-gray-600" />
               )
-            ) : null}
+            ) : <div className="w-4 h-4"/>}
           </div>
 
           <div className="flex-1 min-w-0 select-text" data-ignore-blur-id={item.id}>
@@ -103,7 +103,7 @@ export default function ProcessItem({
                   type="text"
                   value={editForm!.title}
                   onChange={(e) => setEditForm({ ...editForm!, title: e.target.value })}
-                  className="w-full p-0.5 text-sm font-medium outline-none z-12"
+                  className="w-full p-1 text-sm font-medium outline-none z-12"
                 />
               </div>
             ) : (
@@ -119,30 +119,18 @@ export default function ProcessItem({
             )}
           </div>
 
-          <div className="flex gap-0.5 flex-shrink-0 px-1" onClick={(e) => e.stopPropagation()}>
-            {isEditing && (
-              <>
-                <button
-                  onClick={() => saveEdit(item.id)}
-                  disabled={isLoading || !editForm!.title.trim()}
-                  className="p-1 text-green-600 hover:bg-green-50 rounded transition-colors disabled:opacity-50"
-                >
-                  {isLoading ? (
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                  ) : (
-                    <Save className="w-3 h-3" />
-                  )}
-                </button>
-                <button
-                  onClick={cancelEdit}
-                  disabled={isLoading}
-                  className="p-1 text-gray-600 hover:bg-gray-100 rounded transition-colors disabled:opacity-50"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </>
-            )}
-          </div>
+          {isEditing && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  cancelEdit()
+                }}
+                disabled={isLoading}
+                className="cursor-grab p-1 text-gray-600 hover:bg-gray-100 rounded transition-colors disabled:opacity-50"
+              >
+                <X className="w-3 h-3" />
+              </button>
+          )}
         </div>
       </div>
 

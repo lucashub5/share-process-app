@@ -1,42 +1,29 @@
 import { useState, useRef } from "react";
 import {
   Plus,
-  ChevronRight,
-  ChevronDown,
-  ChevronUp,
   Edit2,
   Trash2,
   Settings,
   X,
 } from "lucide-react";
-
-interface Client {
-  id: string;
-  name: string;
-  emailAccess?: string[]; // suponemos esto por ahora
-}
+import { Client } from "@/types/types";
 
 interface Props {
   clients: Client[];
   loading: boolean;
   selectedClientId: string | null;
-  onSelect: (id: string) => void;
+  onSelect: React.Dispatch<React.SetStateAction<Client | null>>
   onCreate: (name: string) => void;
-  onEdit: (client: Client) => void;
-  onDelete: (id: string) => void;
 }
 
 export default function ClientSelector({
   clients,
+  loading,
   selectedClientId,
   onSelect,
   onCreate,
-  onEdit,
-  onDelete,
 }: Props) {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [configOpenId, setConfigOpenId] = useState<string | null>(null);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [newEmail, setNewEmail] = useState("");
 
   const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -70,177 +57,175 @@ export default function ClientSelector({
     }, 200);
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Cargando clientes...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="relative flex flex-col items-center justify-center whitespace-nowrap mx-1">
-      <span>{selectedClient ? selectedClient.name : "Sin cliente"}</span>
-      <button
-        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-        className="text-blue-600 text-xs font-medium flex items-center gap-0.5 hover:underline"
-        title="Gestión cliente"
-        type="button"
-      >
-        Gestión cliente
-        {isSidebarOpen ? (
-          <ChevronDown className="w-3 h-3" />
-        ) : (
-          <ChevronRight className="w-3 h-3" />
-        )}
-      </button>
-
-      {isSidebarOpen && (
-        <div className="absolute top-[120%] right-5 w-80 bg-white shadow-lg border border-gray-200 rounded-md p-4 flex flex-col z-50">
-          <div className="absolute -top-2 right-4 w-4 h-4 bg-white border-l border-t border-gray-200 rotate-45 z-[-1]" />
-
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold">Gestión de Clientes</h2>
-          </div>
-
+    <div className="h-full w-full flex flex-col p-6 bg-gray-50">
+      <div className="max-w-2xl mx-auto w-full">
+        {/* Botón crear cliente */}
+        <div className="mb-6">
           <button
             onClick={handleCreateClick}
-            className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition mb-4"
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
             type="button"
           >
-            <Plus className="w-4 h-4" />
-            Crear Cliente
+            <Plus className="w-5 h-5" />
+            Crear Nuevo Cliente
           </button>
+        </div>
 
-          {/* Custom Select */}
-          <div className="relative mb-3">
-            {!isDropdownOpen ? (
-              <div
-                className="flex justify-between items-center px-2 py-1 rounded-md bg-blue-50 border border-blue-200 cursor-pointer"
-                onClick={() => setIsDropdownOpen(true)}
-                onMouseEnter={handleMouseEnter}
-              >
-                <div className="flex items-center gap-2 truncate">
-                  <span className="text-sm text-gray-800">{selectedClient?.name}</span>
-                </div>
-                <div
-                  className="flex items-center gap-1"
-                  onClick={(e) => e.stopPropagation()}
-                  onMouseLeave={handleMouseLeave}
-                >
-                  {configOpenId === selectedClient?.id ? (
-                    <>
-                      <button
-                        onClick={() => {
-                          if (selectedClient) onEdit(selectedClient);
-                          setConfigOpenId(null);
-                        }}
-                        className="p-1 text-gray-500 hover:bg-gray-100 rounded transition-colors"
-                        title="Editar"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (
-                            selectedClient &&
-                            confirm(`¿Eliminar cliente "${selectedClient.name}"?`)
-                          ) {
-                            onDelete(selectedClient.id);
-                            setConfigOpenId(null);
-                          }
-                        }}
-                        className="p-1 text-red-500 hover:bg-red-100 rounded transition-colors"
-                        title="Eliminar"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      onClick={() => {
-                        if (selectedClient) setConfigOpenId(selectedClient.id);
-                      }}
-                      className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
-                      title="Configuración"
-                    >
-                      <Settings className="w-4 h-4" />
-                    </button>
-                  )}
-                  <ChevronDown className="w-4 h-4 text-gray-500" />
-                </div>
+        {/* Lista de clientes */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+          <div className="p-4 border-b border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-800">Lista de Clientes</h3>
+            <p className="text-sm text-gray-600 mt-1">
+              {clients.length} cliente{clients.length !== 1 ? 's' : ''} disponible{clients.length !== 1 ? 's' : ''}
+            </p>
+          </div>
+          
+          <div className="divide-y divide-gray-200">
+            {clients.length === 0 ? (
+              <div className="p-8 text-center text-gray-500">
+                <p className="text-lg mb-2">No hay clientes disponibles</p>
+                <p className="text-sm">Crea tu primer cliente para comenzar</p>
               </div>
             ) : (
-              <div className="relative">
+              clients.map((client) => (
                 <div
-                  className="border border-gray-300 rounded-md px-2 py-1 text-sm cursor-pointer flex justify-between items-center hover:bg-gray-50"
-                  onClick={() => setIsDropdownOpen(false)}
+                  key={client.id}
+                  className={`p-4 hover:bg-gray-50 transition-colors ${
+                    client.id === selectedClientId ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
+                  }`}
                 >
-                  <span className="truncate">{selectedClient?.name || "Seleccionar cliente..."}</span>
-                  <ChevronUp className="w-4 h-4 text-gray-500" />
-                </div>
-                <div className="absolute mt-1 left-0 right-0 max-h-48 overflow-y-auto bg-white border border-gray-200 rounded-md shadow z-10">
-                  {clients.map((client) => (
-                    <div
-                      key={client.id}
-                      onClick={() => {
-                        onSelect(client.id);
-                        setIsDropdownOpen(false);
-                        setConfigOpenId(null);
-                        setEmails(client.emailAccess ?? []);
-                      }}
-                      className={`px-2 py-1 text-sm cursor-pointer hover:bg-blue-50 ${
-                        client.id === selectedClientId ? "bg-blue-100 font-medium" : ""
-                      }`}
-                    >
-                      {client.name}
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div
+                        className="cursor-pointer"
+                        onClick={() => onSelect(client)}
+                      >
+                        <h4 className="font-medium text-gray-900 hover:text-blue-600 transition-colors">
+                          {client.name}
+                        </h4>
+                        <p className="text-sm text-gray-500 mt-1">
+                          {client.emailAccess?.length || 0} email{(client.emailAccess?.length || 0) !== 1 ? 's' : ''} asociado{(client.emailAccess?.length || 0) !== 1 ? 's' : ''}
+                        </p>
+                      </div>
                     </div>
-                  ))}
+                    
+                    <div className="flex items-center gap-2">
+                      {client.id === selectedClientId && (
+                        <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
+                          Seleccionado
+                        </span>
+                      )}
+                      
+                      <div
+                        className="relative"
+                        onMouseEnter={handleMouseEnter}
+                        onMouseLeave={handleMouseLeave}
+                      >
+                        {configOpenId === client.id ? (
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => setConfigOpenId(null)}
+                              className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
+                              title="Editar"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (confirm(`¿Eliminar cliente "${client.name}"?`)) {
+                                  setConfigOpenId(null);
+                                  // Aquí iría la lógica de eliminación
+                                }
+                              }}
+                              className="p-2 text-red-500 hover:bg-red-100 rounded-lg transition-colors"
+                              title="Eliminar"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setConfigOpenId(client.id)}
+                            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                            title="Configuración"
+                          >
+                            <Settings className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Expandir detalles del cliente seleccionado */}
+                  {client.id === selectedClientId && (
+                    <div className="mt-4 pt-4 border-t border-gray-200">
+                      <div className="space-y-3">
+                        <h5 className="text-sm font-medium text-gray-800">Accesos por email</h5>
+                        
+                        {emails.length === 0 ? (
+                          <p className="text-xs text-gray-500 italic">Sin emails asociados.</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {emails.map((email) => (
+                              <div
+                                key={email}
+                                className="flex items-center justify-between text-sm bg-gray-50 border border-gray-200 px-3 py-2 rounded-lg"
+                              >
+                                <span className="truncate">{email}</span>
+                                <button
+                                  className="text-gray-400 hover:text-red-500 ml-2"
+                                  onClick={() => handleRemoveEmail(email)}
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="email"
+                            value={newEmail}
+                            onChange={(e) => setNewEmail(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                handleAddEmail();
+                              }
+                            }}
+                            placeholder="Agregar email..."
+                            className="flex-1 text-sm border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                          <button
+                            onClick={handleAddEmail}
+                            className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                            title="Agregar email"
+                          >
+                            <Plus className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
+              ))
             )}
           </div>
-
-          {/* Emails asociados */}
-          {selectedClient && (
-            <div className="space-y-1">
-              <h3 className="text-sm font-medium text-gray-800 mb-1">Accesos por email</h3>
-              {emails.length === 0 && (
-                <p className="text-xs text-gray-500 italic">Sin emails asociados.</p>
-              )}
-              {emails.map((email) => (
-                <div
-                  key={email}
-                  className="flex items-center justify-between text-sm bg-gray-50 border border-gray-200 px-2 py-1 rounded"
-                >
-                  <span className="truncate">{email}</span>
-                  <button
-                    className="text-gray-400 hover:text-red-500"
-                    onClick={() => handleRemoveEmail(email)}
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
-
-              <div className="flex items-center mt-2 gap-1">
-                <input
-                  type="email"
-                  value={newEmail}
-                  onChange={(e) => setNewEmail(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      handleAddEmail();
-                    }
-                  }}
-                  placeholder="Agregar email..."
-                  className="w-full text-sm border border-gray-300 px-2 py-1 rounded focus:outline-none focus:ring focus:ring-blue-200"
-                />
-                <button
-                  onClick={handleAddEmail}
-                  className="p-1 bg-blue-600 hover:bg-blue-700 text-white rounded"
-                  title="Agregar email"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

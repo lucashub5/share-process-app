@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Process, ProcessEditorHandle } from "../types";
+import { Process, ProcessEditorHandle } from "../../types/types";
 
 export function useTabs() {
   const [openProcess, setOpenProcess] = useState<Process | null>(null);

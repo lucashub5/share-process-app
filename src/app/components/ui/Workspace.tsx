@@ -14,26 +14,29 @@ import { useClients } from "../../hooks/useClients";
 import { useProcesses } from "../../hooks/useProcesses";
 import { useTabs } from "../../hooks/useTabs";
 import { useEditingManager } from "../../hooks/useEditingManager";
-import { DocumentType, Process } from "@/app/types";
-import { CircleUser, Loader2 } from "lucide-react";
+import { DocumentType, Process } from "@/types/types";
+import { BookOpenText, LoaderPinwheel, SquareStack } from "lucide-react";
 import { SkeletonLoaderContent } from "@/app/misc/SkeletonLoader";
+import UserDropdown from "../auth/UserDropdown";
 
 export default function Workspace() {
-  const { data: session, status } = useSession();
-  const userName = ((session?.user?.name) ?? "Usuario").trim().split(" ")[0];
+  const { status } = useSession();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | number | null>(null);
   const [editForm, setEditForm] = useState<Process | null>(null);
   const [configOpenId, setConfigOpenId] = useState<string | number | null>(null);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+  const [currentView, setCurrentView] = useState<'processes' | 'clients'>('processes');
 
   const {
     clients,
-    selectedClientId,
-    setSelectedClientId,
     loadingClients,
+    selectedClient,
+    setSelectedClient,
     createClient,
-  } = useClients(status);
+  } = useClients();
+
+  const selectedClientId = selectedClient ? selectedClient.id : null
 
   const {
     processes,
@@ -72,19 +75,6 @@ export default function Workspace() {
       setOpenTabs((prev) => [...prev, openProcess]);
     }
   }, [openProcess, openTabs, setOpenTabs]);
-
-    if (status === "loading") {
-        return (
-            <main className="h-screen flex items-center justify-center text-gray-600">
-                <Loader2 className="animate-spin w-8 h-8 mr-2" />
-                Cargando sesión...
-            </main>
-        );  
-    }
-
-  if (status === "unauthenticated") {
-    return <main className="h-screen"><Login /></main>;
-  }
 
   const toggleExpanded = (id: string) => {
     setExpandedItems((prev) => {
@@ -264,162 +254,221 @@ export default function Workspace() {
     }
   };
 
-    const deleteProcess = async (id: string | number) => {
-      if (!confirm("¿Estás seguro de que quieres eliminar este proceso?")) return;
-  
-      try {
-        setActionLoading(id);
-        const response = await fetch(`/api/processes/${id}?clientId=${selectedClientId}`, {
-          method: "DELETE",
-        });
-  
-        if (response.ok) {
-          const collectIds = (items: Process[]): (string | number)[] => {
-            return items.flatMap((item) => {
-              const childIds = item.childrens ? collectIds(item.childrens) : [];
-              return [item.id, ...childIds];
-            });
-          };
-  
-          const findDeletedProcess = (items: Process[]): Process | null => {
-            for (const item of items) {
-              if (item.id === id) return item;
-              if (item.childrens) {
-                const result = findDeletedProcess(item.childrens);
-                if (result) return result;
-              }
+  const deleteProcess = async (id: string | number) => {
+    if (!confirm("¿Estás seguro de que quieres eliminar este proceso?")) return;
+
+    try {
+      setActionLoading(id);
+      const response = await fetch(`/api/processes/${id}?clientId=${selectedClientId}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        const collectIds = (items: Process[]): (string | number)[] => {
+          return items.flatMap((item) => {
+            const childIds = item.childrens ? collectIds(item.childrens) : [];
+            return [item.id, ...childIds];
+          });
+        };
+
+        const findDeletedProcess = (items: Process[]): Process | null => {
+          for (const item of items) {
+            if (item.id === id) return item;
+            if (item.childrens) {
+              const result = findDeletedProcess(item.childrens);
+              if (result) return result;
             }
-            return null;
-          };
-  
-          const deleted = findDeletedProcess(processes);
-          const deletedIds = deleted ? collectIds([deleted]) : [id];
-  
-          setOpenTabs((prev) => prev.filter((tab) => !deletedIds.includes(tab.id)));
-  
-          if (openProcess && deletedIds.includes(openProcess.id)) {
-            setOpenProcess(null);
           }
-  
-          const removeProcess = (items: Process[]): Process[] =>
-            items.filter((item) => {
-              if (item.id === id) return false;
-              if (item.childrens) item.childrens = removeProcess(item.childrens);
-              return true;
-            });
-  
-          setProcesses(removeProcess(processes));
+          return null;
+        };
+
+        const deleted = findDeletedProcess(processes);
+        const deletedIds = deleted ? collectIds([deleted]) : [id];
+
+        setOpenTabs((prev) => prev.filter((tab) => !deletedIds.includes(tab.id)));
+
+        if (openProcess && deletedIds.includes(openProcess.id)) {
+          setOpenProcess(null);
         }
-      } catch (error) {
-        console.error("Error deleting process:", error);
-      } finally {
-        setActionLoading(null);
+
+        const removeProcess = (items: Process[]): Process[] =>
+          items.filter((item) => {
+            if (item.id === id) return false;
+            if (item.childrens) item.childrens = removeProcess(item.childrens);
+            return true;
+          });
+
+        setProcesses(removeProcess(processes));
       }
-    };
-      return (
-        <div
-          className="flex flex-col h-screen"
-          onClick={(e) => {
-            const target = e.target as HTMLElement;
-            const ignoreParent = target.closest("[data-ignore-blur-id]");
-            const ignoreId = ignoreParent?.getAttribute("data-ignore-blur-id");
-    
-            if (
-              editForm &&
-              !(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) &&
-              ignoreId !== String(editForm.id)
-            ) {
-              saveEdit(editForm.id.toString());
-            }
-          }}
-        >
-          <header className="p-2">
-            <div className="flex items-center gap-2 justify-end text-sm">
-              <div className="h-6 w-6 flex flex-col items-center text-neutral-700">
-                <CircleUser />
-              </div>
-            </div>
-          </header>
-          <div className="flex flex-1">
-          <div
-            className={`${
-              sidebarOpen ? "w-80" : "w-0"
-            } transition-all duration-300 overflow-hidden bg-white`}
-          >
-            <ProcessManager
-              processes={processes}
-              openProcess={openProcess}
-              setOpenProcess={setOpenProcess}
-              selectedProcess={selectedProcess}
-              setSelectedProcess={setSelectedProcess}
-              loading={loading}
-              actionLoading={actionLoading}
-              editForm={editForm}
-              setEditForm={setEditForm}
-              configOpenId={configOpenId}
-              setConfigOpenId={setConfigOpenId}
-              saveEdit={saveEdit}
-              addSubprocess={addSubprocess}
-              deleteProcess={deleteProcess}
-              cancelEditTitle={cancelEditTitle}
-              expandedItems={expandedItems}
-              toggleExpanded={toggleExpanded}
-            />
-          </div>
-    
-          <div className="w-full flex flex-col relative">
-            <div className="flex items-center justify-between h-14 bg-white pl-3">
-              <div className="w-full h-full py-2 grid grid-cols-[auto_1fr_auto] items-center gap-2 ">
-                <SidebarToggleButton onToggle={() => setSidebarOpen(!sidebarOpen)} />
-                <ProcessTabs
-                  tabs={openTabs}
-                  activeTabId={openProcess?.id ?? null}
-                  onSelect={openTab}
-                  onClose={closeTab}
-                />
-                <ClientSelector
-                  clients={clients}
-                  loading={loadingClients}
-                  selectedClientId={selectedClientId}
-                  onSelect={setSelectedClientId}
-                  onCreate={createClient}
-                />
-              </div>
-            </div>
-    
-            <main className="flex-1 overflow-hidden relative mx-3">
-                {loading ? (
-                    <SkeletonLoaderContent />
-                ) : !selectedClientId ? (
-                    <div className="flex items-center justify-center h-full text-gray-500 text-lg">
-                    Selecciona un cliente para ver sus procesos.
-                    </div>
-                ) : (
-                    openTabs.map((tab) => (
-                    <div
-                        key={tab.id}
-                        className={`absolute inset-0 transition-opacity duration-200 ${
-                        openProcess?.id === tab.id
-                            ? "opacity-100 z-10"
-                            : "opacity-0 z-0 pointer-events-none"
-                        }`}
-                    >
-                        {isEditing(tab.id) ? (
-                        <ContentEditor
-                            tab={tab}
-                            onSave={saveAndExit}
-                            onCancel={cancelEdit}
-                            editorRefs={editorRefs}
-                        />
-                        ) : (
-                        <ContentViewer openProcess={tab} onEdit={() => setIsEditing(tab.id, true)} />
-                        )}
-                    </div>
-                    ))
-                )}
-            </main>
-          </div>
-          </div>
+    } catch (error) {
+      console.error("Error deleting process:", error);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  if (status === "unauthenticated") {
+    return <main className="h-screen"><Login /></main>;
+  }
+
+  if (loadingClients) {
+    return (
+      <div className="fixed inset-0 flex flex-col items-center justify-center bg-white z-50">
+        <LoaderPinwheel className="animate-pulse w-10 h-10 text-gray-600 mb-4" />
+      </div>
+    );
+  }
+
+  const NoClientSelected = () => (
+    <div className="flex flex-col items-center justify-center h-full gap-4 text-gray-700 px-6 text-center max-w-md mx-auto">
+      <p className="text-xl font-semibold">No tienes clientes asociados.</p>
+      <SquareStack/>
+      <p className="text-sm text-gray-500 mt-2">
+        Puedes solicitar que te asocien a un cliente ya existente para empezar a trabajar con él, o bien iniciar la gestión de un nuevo cliente por tu cuenta.
+      </p>
+    </div>
+  );  
+
+  return (
+    <div
+      className="flex flex-col h-screen"
+      onClick={(e) => {
+        const target = e.target as HTMLElement;
+        const ignoreParent = target.closest("[data-ignore-blur-id]");
+        const ignoreId = ignoreParent?.getAttribute("data-ignore-blur-id");
+
+        if (
+          editForm &&
+          !(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) &&
+          ignoreId !== String(editForm.id)
+        ) {
+          saveEdit(editForm.id.toString());
+        }
+      }}
+    >
+      <header className="w-full flex items-center justify-between p-2 px-4 border-b-1 border-gray-200">
+        <div className="w-6 h-6 bg-gradient-to-r from-purple-500 to-pink-500 mask mask-icon rounded-full p-0.5">
+          <LoaderPinwheel className="w-full h-full text-white" strokeWidth={1.5} />
         </div>
-      );
+        <div className="flex items-center gap-5 justify-end text-sm text-gray-1000">
+          <button
+            onClick={() => setCurrentView('processes')}
+            className={`p-1.5 rounded-lg transition-colors duration-200 ${
+              currentView === 'processes' 
+                ? 'bg-blue-100 text-blue-600' 
+                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
+            }`}
+            title="Procesos"
+          >
+            <BookOpenText className="w-5 h-5"/>
+          </button>
+          <button
+            onClick={() => setCurrentView('clients')}
+            className={`p-1.5 rounded-lg transition-colors duration-200 ${
+              currentView === 'clients' 
+                ? 'bg-blue-100 text-blue-600' 
+                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
+            }`}
+            title="Clientes"
+          >
+            <SquareStack className="w-5 h-5"/>
+          </button>
+          <div className="flex flex-col w-30 pl-1.5 items-center">
+            <span className="text-xs text-blue-600">Cliente</span>
+            <span className="text-sm font-bold text-gray-800">{selectedClient?.name}</span>
+          </div>
+          <UserDropdown/>
+        </div>
+      </header>
+      
+      <div className="flex flex-1">
+        {currentView === 'clients' ? (
+          <ClientSelector
+            clients={clients}
+            loading={loadingClients}
+            selectedClientId={selectedClientId}
+            onSelect={setSelectedClient}
+            onCreate={createClient}
+          />
+        ) : (
+          // Vista de procesos completa
+          <>
+            {!selectedClientId ? (
+              <NoClientSelected/>
+            ) : (
+              <>
+                <div
+                  className={`${
+                    sidebarOpen ? "w-80" : "w-0"
+                  } transition-all duration-300 overflow-hidden bg-white`}
+                >
+                  <ProcessManager
+                    processes={processes}
+                    openProcess={openProcess}
+                    setOpenProcess={setOpenProcess}
+                    selectedProcess={selectedProcess}
+                    setSelectedProcess={setSelectedProcess}
+                    loading={loading}
+                    actionLoading={actionLoading}
+                    editForm={editForm}
+                    setEditForm={setEditForm}
+                    configOpenId={configOpenId}
+                    setConfigOpenId={setConfigOpenId}
+                    saveEdit={saveEdit}
+                    addSubprocess={addSubprocess}
+                    deleteProcess={deleteProcess}
+                    cancelEditTitle={cancelEditTitle}
+                    expandedItems={expandedItems}
+                    toggleExpanded={toggleExpanded}
+                  />
+                </div>
+
+                <div className="w-full flex flex-col relative">
+                  <div className="flex items-center justify-between h-14 bg-white pl-3">
+                    <div className="w-full h-full p-2 grid grid-cols-[auto_1fr_auto] items-center gap-2">
+                      <SidebarToggleButton onToggle={() => setSidebarOpen(!sidebarOpen)} />
+                      <ProcessTabs
+                        tabs={openTabs}
+                        activeTabId={openProcess?.id ?? null}
+                        onSelect={openTab}
+                        onClose={closeTab}
+                      />
+                    </div>
+                  </div>
+
+                  <main className="flex-1 overflow-hidden relative mx-3">
+                    {loading ? (
+                      <SkeletonLoaderContent />
+                    ) : (
+                      openTabs.map((tab) => (
+                        <div
+                          key={tab.id}
+                          className={`absolute inset-0 transition-opacity duration-200 ${
+                            openProcess?.id === tab.id
+                              ? "opacity-100 z-10"
+                              : "opacity-0 z-0 pointer-events-none"
+                          }`}
+                        >
+                          {isEditing(tab.id) ? (
+                            <ContentEditor
+                              tab={tab}
+                              onSave={saveAndExit}
+                              onCancel={cancelEdit}
+                              editorRefs={editorRefs}
+                            />
+                          ) : (
+                            <ContentViewer openProcess={tab} onEdit={() => setIsEditing(tab.id, true)} />
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </main>
+                </div>
+              </>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
 }

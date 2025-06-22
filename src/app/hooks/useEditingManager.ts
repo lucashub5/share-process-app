@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { Process, ProcessEditorHandle } from "../types";
+import { Process, ProcessEditorHandle } from "../../types/types";
 
 type UseEditingManagerParams = {
     editorRefs: React.RefObject<Record<string, ProcessEditorHandle | null>>;
