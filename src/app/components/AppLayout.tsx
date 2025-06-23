@@ -2,24 +2,24 @@
 
 import { useSession } from "next-auth/react";
 import React, { useEffect, useState } from "react";
-import Login from "../auth/Login";
-import ContentViewer from "../content/ContentViewer";
-import ContentEditor from "../content/ContentEditor";
-import ProcessManager from "../process/ProcessManager";
-import ProcessTabs from "../process/ProcessTabs";
-import SidebarToggleButton from "./SidebarToggleButton";
-import ClientSelector from "../client/ClientSelector";
+import Login from "./auth/Login";
+import ContentViewer from "./content/ContentViewer";
+import ContentEditor from "./content/ContentEditor";
+import ProcessManager from "./process/ProcessManager";
+import ProcessTabs from "./process/ProcessTabs";
+import SidebarToggleButton from "./ui/SidebarToggleButton";
+import ClientSelector from "./client/ClientSelector";
 
-import { useClients } from "../../hooks/useClients";
-import { useProcesses } from "../../hooks/useProcesses";
-import { useTabs } from "../../hooks/useTabs";
-import { useEditingManager } from "../../hooks/useEditingManager";
+import { useClients } from "../hooks/useClients";
+import { useProcesses } from "../hooks/useProcesses";
+import { useTabs } from "../hooks/useTabs";
+import { useEditingManager } from "../hooks/useEditingManager";
 import { DocumentType, Process } from "@/types/types";
 import { BookOpenText, LoaderPinwheel, SquareStack } from "lucide-react";
 import { SkeletonLoaderContent } from "@/app/misc/SkeletonLoader";
-import UserDropdown from "../auth/UserDropdown";
+import UserDropdown from "./auth/UserDropdown";
 
-export default function Workspace() {
+export default function AppLayout() {
   const { status } = useSession();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | number | null>(null);
@@ -102,6 +102,7 @@ export default function Workspace() {
       removeTempProcess(editForm.id);
     }
     setEditForm(null);
+    setSelectedProcess(null);
   };
 
   const addSubprocess = async (selectedId: string | null, type: DocumentType) => {
@@ -132,11 +133,8 @@ export default function Workspace() {
                 input.setSelectionRange(input.value.length, input.value.length);
             }
         }, 0);
+        
         return;
-    }
-
-    if (editForm?.id?.toString().startsWith("temp-")) {
-        removeTempProcess(editForm.id);
     }
 
     const tempId = `temp-${-Date.now()}`;
@@ -177,7 +175,6 @@ export default function Workspace() {
     
     setEditForm(newProcess);
     setSelectedProcess(newProcess);
-      
   };
 
   const saveEdit = async (id: string) => {
@@ -299,6 +296,7 @@ export default function Workspace() {
           });
 
         setProcesses(removeProcess(processes));
+        setSelectedProcess(null);
       }
     } catch (error) {
       console.error("Error deleting process:", error);
@@ -330,22 +328,7 @@ export default function Workspace() {
   );  
 
   return (
-    <div
-      className="flex flex-col h-screen"
-      onClick={(e) => {
-        const target = e.target as HTMLElement;
-        const ignoreParent = target.closest("[data-ignore-blur-id]");
-        const ignoreId = ignoreParent?.getAttribute("data-ignore-blur-id");
-
-        if (
-          editForm &&
-          !(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) &&
-          ignoreId !== String(editForm.id)
-        ) {
-          saveEdit(editForm.id.toString());
-        }
-      }}
-    >
+    <div className="flex flex-col h-screen">
       <header className="w-full flex items-center justify-between p-2 px-4 border-b-1 border-gray-200">
         <div className="w-6 h-6 bg-gradient-to-r from-purple-500 to-pink-500 mask mask-icon rounded-full p-0.5">
           <LoaderPinwheel className="w-full h-full text-white" strokeWidth={1.5} />
@@ -373,9 +356,13 @@ export default function Workspace() {
           >
             <SquareStack className="w-5 h-5"/>
           </button>
-          <div className="flex flex-col w-30 pl-1.5 items-center">
-            <span className="text-xs text-blue-600">Cliente</span>
-            <span className="text-sm font-bold text-gray-800">{selectedClient?.name}</span>
+          <div className="flex flex-col w-30 items-center">
+            {selectedClientId && (
+              <>  
+                <span className="text-xs text-blue-600 select-none">Cliente</span>
+                <span className="text-sm font-bold text-gray-800">{selectedClient?.name}</span>
+              </>
+            )}
           </div>
           <UserDropdown/>
         </div>
@@ -425,7 +412,7 @@ export default function Workspace() {
 
                 <div className="w-full flex flex-col relative">
                   <div className="flex items-center justify-between h-14 bg-white pl-3">
-                    <div className="w-full h-full p-2 grid grid-cols-[auto_1fr_auto] items-center gap-2">
+                    <div className="w-full h-full py-2 grid grid-cols-[auto_1fr_auto] items-center gap-2">
                       <SidebarToggleButton onToggle={() => setSidebarOpen(!sidebarOpen)} />
                       <ProcessTabs
                         tabs={openTabs}

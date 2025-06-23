@@ -16,12 +16,28 @@ export type ProcessEditorHandle = {
 export type Client = {
   id: string;
   name: string;
+  imageId?: string;
   creatorId: string;
-  emailAccess: string[];
-  accesses: {
-    userId: string;
-    canEdit: boolean;
-    canDelete: boolean;
-    canCreate: boolean;
-  }[];
+  createdAt: string;
+  accesses: Access[];
+};
+
+export type Access = {
+  id: string;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    imageUrl: string;
+    imageId: string;
+  }
+  state: "pending" | "accepted" | "rejected";
+  joinedAt: string | null;
+  permissions: Permission[];
+};
+
+export type Permission = {
+  scope: "users" | "processes" | "documents";
+  action: "invite" | "remove" | "edit" | "delete" | "create" | "grant";
+  allowed: boolean;
 };

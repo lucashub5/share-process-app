@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { Client } from "@/types/types";
+import { Client, Access, Permission } from "@/types/types";
 
 export function useClients() {
   const { data: session, status } = useSession();
@@ -57,49 +57,252 @@ export function useClients() {
       const newClient: Client = await response.json();
       setClients((prev) => [...prev, newClient]);
       setSelectedClient(newClient);
+      return newClient;
     } catch (error) {
       console.error("Error creando cliente:", error);
       throw error;
     }
   };
 
-  const getClientPermissions = (clientId: string) => {
-    const client = clients.find(c => c.id === clientId);
-    if (!client || !session?.user?.id) {
-      return { canEdit: false, canDelete: false, canCreate: false };
+  const updatePermission = async (accessId: string, scope: Permission['scope'], action: Permission['action'], allowed: boolean) => {
+    if (!selectedClient) return;
+
+    try {
+      const response = await fetch(`/api/clients/${selectedClient.id}/permissions`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accessId, scope, action, allowed }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Error actualizando permiso");
+      }
+
+      // Actualizar el estado local
+      setClients(prev => prev.map(client => {
+        if (client.id === selectedClient.id) {
+          return {
+            ...client,
+            accesses: client.accesses.map(access => {
+              if (access.userId === accessId) {
+                return {
+                  ...access,
+                  permissions: access.permissions.map(permission => {
+                    if (permission.scope === scope && permission.action === action) {
+                      return { ...permission, allowed };
+                    }
+                    return permission;
+                  })
+                };
+              }
+              return access;
+            })
+          };
+        }
+        return client;
+      }));
+
+      // Actualizar selectedClient también
+      if (selectedClient.id === selectedClient.id) {
+        setSelectedClient(prev => prev ? {
+          ...prev,
+          accesses: prev.accesses.map(access => {
+            if (access.userId === accessId) {
+              return {
+                ...access,
+                permissions: access.permissions.map(permission => {
+                  if (permission.scope === scope && permission.action === action) {
+                    return { ...permission, allowed };
+                  }
+                  return permission;
+                })
+              };
+            }
+            return access;
+          })
+        } : null);
+      }
+    } catch (error) {
+      console.error("Error updating permission:", error);
+      throw error;
     }
+  };
+
+  const updateAccessState = async (accessId: string, newState: Access['state']) => {
+    if (!selectedClient) return;
+
+    try {
+      const response = await fetch(`/api/clients/${selectedClient.id}/access-state`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accessId, state: newState }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Error actualizando estado de acceso");
+      }
+
+      // Actualizar el estado local
+      setClients(prev => prev.map(client => {
+        if (client.id === selectedClient.id) {
+          return {
+            ...client,
+            accesses: client.accesses.map(access => {
+              if (access.userId === accessId) {
+                return {
+                  ...access,
+                  state: newState,
+                  joinedAt: newState === 'accepted' ? new Date().toISOString() : access.joinedAt
+                };
+              }
+              return access;
+            })
+          };
+        }
+        return client;
+      }));
+
+      // Actualizar selectedClient también
+      if (selectedClient.id === selectedClient.id) {
+        setSelectedClient(prev => prev ? {
+          ...prev,
+          accesses: prev.accesses.map(access => {
+            if (access.userId === accessId) {
+              return {
+                ...access,
+                state: newState,
+                joinedAt: newState === 'accepted' ? new Date().toISOString() : access.joinedAt
+              };
+            }
+            return access;
+          })
+        } : null);
+      }
+    } catch (error) {
+      console.error("Error updating access state:", error);
+      throw error;
+    }
+  };
+
+  const getUserAccess = (clientId: string): Access | null => {
+    const client = clients.find(c => c.id === clientId);
+    if (!client || !session?.user?.id) return null;
+
+    return client.accesses.find(a => a.userId === session.user.id) || null;
+  };
+
+  const hasPermission = (clientId: string, scope: Permission['scope'], action: Permission['action']): boolean => {
+    const client = clients.find(c => c.id === clientId);
+    if (!client || !session?.user?.id) return false;
 
     // Si es el creador, tiene todos los permisos
-    if (client.creatorId === session.user.id) {
-      return { canEdit: true, canDelete: true, canCreate: true };
-    }
+    if (client.creatorId === session.user.id) return true;
 
-    // Si no, buscar en los accesos específicos
+    // Buscar el acceso del usuario
     const access = client.accesses.find(a => a.userId === session.user.id);
-    return access || { canEdit: false, canDelete: false, canCreate: false };
+    if (!access || access.state !== 'accepted') return false;
+
+    // Buscar el permiso específico
+    const permission = access.permissions.find(p => p.scope === scope && p.action === action);
+    return permission?.allowed || false;
   };
 
-  const canEditClient = (clientId: string) => {
-    return getClientPermissions(clientId).canEdit;
+  const canEditClient = (clientId: string): boolean => {
+    return hasPermission(clientId, 'users', 'edit');
   };
 
-  const canDeleteClient = (clientId: string) => {
-    return getClientPermissions(clientId).canDelete;
+  const canDeleteClient = (clientId: string): boolean => {
+    return hasPermission(clientId, 'users', 'delete');
   };
 
-  const canCreateInClient = (clientId: string) => {
-    return getClientPermissions(clientId).canCreate;
+  const canCreateInClient = (clientId: string): boolean => {
+    return hasPermission(clientId, 'processes', 'create');
+  };
+
+  const canInviteUsers = (clientId: string): boolean => {
+    return hasPermission(clientId, 'users', 'invite');
+  };
+
+  const canRemoveUsers = (clientId: string): boolean => {
+    return hasPermission(clientId, 'users', 'remove');
+  };
+
+  const canGrantPermissions = (clientId: string): boolean => {
+    return hasPermission(clientId, 'users', 'grant');
+  };
+
+  const canEditDocuments = (clientId: string): boolean => {
+    return hasPermission(clientId, 'documents', 'edit');
+  };
+
+  const canDeleteDocuments = (clientId: string): boolean => {
+    return hasPermission(clientId, 'documents', 'delete');
+  };
+
+  const canCreateDocuments = (clientId: string): boolean => {
+    return hasPermission(clientId, 'documents', 'create');
+  };
+
+  const canEditProcesses = (clientId: string): boolean => {
+    return hasPermission(clientId, 'processes', 'edit');
+  };
+
+  const canDeleteProcesses = (clientId: string): boolean => {
+    return hasPermission(clientId, 'processes', 'delete');
+  };
+
+  const isClientCreator = (clientId: string): boolean => {
+    const client = clients.find(c => c.id === clientId);
+    return client?.creatorId === session?.user?.id;
+  };
+
+  const getClientStats = (clientId: string) => {
+    const client = clients.find(c => c.id === clientId);
+    if (!client) return null;
+
+    const totalAccesses = client.accesses.length;
+    const acceptedAccesses = client.accesses.filter(a => a.state === 'accepted').length;
+    const pendingAccesses = client.accesses.filter(a => a.state === 'pending').length;
+    const rejectedAccesses = client.accesses.filter(a => a.state === 'rejected').length;
+
+    return {
+      totalAccesses,
+      acceptedAccesses,
+      pendingAccesses,
+      rejectedAccesses,
+      isCreator: isClientCreator(clientId)
+    };
   };
 
   return {
+    // Estado
     clients,
     selectedClient,
     setSelectedClient,
     loadingClients,
+    
+    // Acciones básicas
     createClient,
-    getClientPermissions,
+    updatePermission,
+    updateAccessState,
+    
+    // Consultas de acceso
+    getUserAccess,
+    hasPermission,
+    isClientCreator,
+    getClientStats,
+    
+    // Helpers de permisos específicos
     canEditClient,
     canDeleteClient,
     canCreateInClient,
+    canInviteUsers,
+    canRemoveUsers,
+    canGrantPermissions,
+    canEditDocuments,
+    canDeleteDocuments,
+    canCreateDocuments,
+    canEditProcesses,
+    canDeleteProcesses,
   };
 }

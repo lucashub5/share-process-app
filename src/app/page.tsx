@@ -1,5 +1,5 @@
-import Workspace from "@/app/components/ui/Workspace";
+import AppLayout from "@/app/components/AppLayout";
 
 export default function HomePage() {
-  return <Workspace />;
+  return <AppLayout />;
 }

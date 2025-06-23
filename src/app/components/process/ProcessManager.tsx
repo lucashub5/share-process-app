@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
-import { FolderPlus, FilePlus, Info, FileX, FolderX, PenLine, ChevronRight, Search } from "lucide-react";
+import { Info, PenLine, ChevronRight, Search, Trash, CopyPlus, FilePlus2 } from "lucide-react";
 import { DocumentType, Process } from "@/types/types";
 import ProcessItem from "./ProcessItem";
 import { SkeletonLoaderProcessList } from "@/app/misc/SkeletonLoader";
@@ -163,7 +163,7 @@ export default function ProcessManager({
 
   return (
     <div 
-      className="h-full flex flex-col bg-gray-100 border-r-1 border-gray-200"
+      className="h-full flex flex-col bg-gray-50 border-r-1 border-gray-200"
       onMouseEnter={() => setShowActionButtons(true)}
       onMouseLeave={() => setShowActionButtons(false)}
     >
@@ -220,9 +220,10 @@ export default function ProcessManager({
         </div>
         {(showActionButtons && !inputFocused) && (
           <div className="flex h-full">
-            {selectedProcess && (
+            {(selectedProcess && !editForm) && (
               <>
                 <button
+                  data-process
                   onClick={() => {
                     setEditForm({ ...selectedProcess });
                     setConfigOpenId(null);
@@ -240,11 +241,7 @@ export default function ProcessManager({
                   className="flex items-center p-1 rounded-md transition-opacity opacity-60 hover:opacity-100 hover:bg-neutral-200 text-gray-800"
                   title="Eliminar"
                 >
-                  {selectedProcess.type === "file" ? (
-                    <FileX className="w-4" />
-                  ) : (
-                    <FolderX className="w-4" />
-                  )}
+                  <Trash className="w-4" />
                 </button>
                 <button
                   className="flex items-center p-1 rounded-md transition-opacity opacity-60 hover:opacity-100 hover:bg-neutral-200 text-gray-800"
@@ -255,6 +252,7 @@ export default function ProcessManager({
               </>
             )}
             <button
+              data-process
               onClick={(e) => {
                 e.stopPropagation();
                 addSubprocess(selectedProcess?.id ?? null, "folder");
@@ -262,9 +260,10 @@ export default function ProcessManager({
               className="flex items-center p-1 rounded-md transition-opacity opacity-60 hover:opacity-100 hover:bg-neutral-200 text-gray-800"
               title="Agregar Proceso"
             >
-              <FolderPlus className="w-4" />
+              <CopyPlus className="w-4" />
             </button>
             <button
+              data-process
               onClick={(e) => {
                 e.stopPropagation();
                 addSubprocess(selectedProcess?.id ?? null, "file");
@@ -272,7 +271,7 @@ export default function ProcessManager({
               className="flex items-center p-1 rounded-md transition-opacity opacity-60 hover:opacity-100 hover:bg-neutral-200 text-gray-800"
               title="Agregar Documento"
             >
-              <FilePlus className="w-4" />
+              <FilePlus2 className="w-4" />
             </button>
           </div>
         )}

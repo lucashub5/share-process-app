@@ -57,6 +57,26 @@ export default function ProcessItem({
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      const clickedInsideProcess = target.closest('[data-process]');
+
+      if (!clickedInsideProcess && isEditing && inputRef.current && !inputRef.current.contains(event.target as Node)) {
+        if (editForm!.title.trim() !== item.title.trim()) {
+          saveEdit(item.id);
+        } else {
+          cancelEdit();
+        }
+      }
+    };
+  
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [cancelEdit, editForm, isEditing, item.id, item.title, saveEdit]);  
+
+  useEffect(() => {
     if (isEditing && inputRef.current) {
       const input = inputRef.current;
       input.focus();
@@ -79,7 +99,7 @@ export default function ProcessItem({
         style={{ paddingLeft: `${21 * level}px` }}
         onClick={onClickContainer}
       >
-        <div className={`pl-3 py-1.5 gap-1 w-full flex items-center ${level > 0 ? "border-l-1" : ""} border-neutral-200 p-0.25`}>
+        <div className={`pl-3 gap-1 w-full flex items-center ${level > 0 ? "border-l-1" : ""} border-neutral-200 p-0.25`}>
           <div className="flex justify-center items-center">
             {(item.type === "file" && isEditing) ? (
               <div className="flex items-center justify-center w-4 h-4">
@@ -94,22 +114,22 @@ export default function ProcessItem({
             ) : <div className="w-4 h-4"/>}
           </div>
 
-          <div className="flex-1 min-w-0 select-text" data-ignore-blur-id={item.id}>
+          <div className="flex-1 min-w-0 select-text">
             {isEditing ? (
-              <div className="space-y-2 bg-blue-200 outline-1 outline-blue-500 rounded-sm" onClick={(e) => e.stopPropagation()}>
+              <div className="h-full py-1 bg-blue-200 rounded-sm" onClick={(e) => e.stopPropagation()}>
                 <input
                   data-temp-id={item.id.startsWith("temp") ? item.id : undefined}
                   ref={inputRef}
                   type="text"
                   value={editForm!.title}
                   onChange={(e) => setEditForm({ ...editForm!, title: e.target.value })}
-                  className="w-full p-1 text-sm font-medium outline-none z-12"
+                  className="pl-1 w-full h-full text-sm font-medium outline-none z-12"
                 />
               </div>
             ) : (
-              <div className="flex gap-2 w-full">
+              <div className="h-full w-full py-1 flex">
                 <h3
-                  className={`p-0.5 text-sm font-medium truncate select-none ${
+                  className={`p-0.5 pl-1 text-sm font-medium select-none ${
                     isDocument ? "text-blue-700" : "text-gray-900"
                   }`}
                 >
@@ -121,6 +141,7 @@ export default function ProcessItem({
 
           {isEditing && (
               <button
+                data-process
                 onClick={(e) => {
                   e.stopPropagation()
                   cancelEdit()

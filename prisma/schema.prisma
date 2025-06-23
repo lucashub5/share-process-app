@@ -1,6 +1,5 @@
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
 }
 
 datasource db {
@@ -13,17 +12,21 @@ model User {
   name           String?
   email          String?        @unique
   emailVerified  DateTime?
-  image          String?
+
+  imageId         String?
+  imageUrl        String?
+
   hashedPassword String?
 
-  createdAt      DateTime       @default(now())
-  lastLoginAt    DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  lastLoginAt DateTime @default(now())
+
+  createdClients Client[]       @relation("CreatedClients")
+  clientAccesses Access[]
 
   accounts       Account[]
   sessions       Session[]
-
-  createdClients Client[]       @relation("CreatedClients")
-  clientAccesses ClientAccess[]
 }
 
 model Account {
@@ -55,54 +58,95 @@ model Session {
 }
 
 model Client {
-  id         String         @id @default(cuid())
+  id         String   @id @default(cuid())
   name       String
+  imageId   String?
 
   creatorId  String
   creator    User           @relation("CreatedClients", fields: [creatorId], references: [id])
 
+  accesses   Access[]
   processes  Process[]
-
-  accesses   ClientAccess[]
-
-  @@map("clients")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
-model ClientAccess {
+model Access {
+  id          String       @id @default(cuid())
+  userId      String
+  clientId    String
+  state       AccessState
+  joinedAt    DateTime?
+
+  permissions Permission[]
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client      Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@unique([userId, clientId])
+}
+
+model Permission {
   id        String   @id @default(cuid())
+  accessId  String
+  scope     Scope
+  action    Action
+  allowed   Boolean
 
-  clientId  String
-  userId    String
+  access    Access   @relation(fields: [accessId], references: [id], onDelete: Cascade)
 
-  canEdit   Boolean  @default(false)
-  canDelete Boolean  @default(false)
-  canCreate Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  user      User     @relation(fields: [userId], references: [id])
-  client    Client   @relation(fields: [clientId], references: [id])
+  @@unique([accessId, scope, action])
+}
 
-  @@unique([clientId, userId])
+model Process {
+  id         String    @id @default(cuid())
+  title       String
+  content     String?
+  date        DateTime @default(now())
+
+  name       String
+  type       ProcessType 
+  
+  clientId   String
+  parentId   String?
+  creatorId  String
+
+  client     Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  parent     Process?  @relation("ProcessToChildren", fields: [parentId], references: [id])
+  childrens  Process[] @relation("ProcessToChildren")
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+}
+
+enum AccessState {
+  pending
+  accepted
+  rejected
+}
+
+enum Scope {
+  users
+  processes
+  documents
+}
+
+enum Action {
+  invite
+  remove
+  edit
+  delete
+  create
+  grant
 }
 
 enum ProcessType {
   file
   folder
-}
-
-model Process {
-  id          String   @id @default(cuid())
-  title       String
-  content     String?
-  date        DateTime @default(now())
-
-  type        ProcessType @default(folder)
-
-  clientId    String
-  client      Client   @relation(fields: [clientId], references: [id])
-
-  parentId    String?
-  parent      Process?    @relation("SubProcesses", fields: [parentId], references: [id])
-  children    Process[]   @relation("SubProcesses")
-
-  @@map("processes")
 }

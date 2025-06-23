@@ -6,6 +6,9 @@ declare module "next-auth" {
       id: string;
     } & DefaultSession["user"];
   }
+  interface Profile {
+    picture?: string;
+  }
 }
 
 declare module "next-auth/jwt" {

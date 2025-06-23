@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { PrismaClient } from "@/generated/prisma";
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -10,22 +10,16 @@ export async function GET() {
     const session = await getServerSession(authOptions);
     
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "No autorizado" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
-    // Obtener clientes donde el usuario es creador O tiene acceso
     const clients = await prisma.client.findMany({
       where: {
         OR: [
           { creatorId: session.user.id },
           {
             accesses: {
-              some: {
-                userId: session.user.id
-              }
+              some: { userId: session.user.id }
             }
           }
         ]
@@ -36,10 +30,25 @@ export async function GET() {
             userId: session.user.id
           },
           select: {
-            canEdit: true,
-            canDelete: true,
-            canCreate: true,
-            userId: true
+            id: true,
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                imageUrl: true,
+                imageId: true,
+              }
+            },
+            state: true,
+            joinedAt: true,
+            permissions: {
+              select: {
+                scope: true,
+                action: true,
+                allowed: true
+              }
+            }
           }
         }
       },
@@ -49,10 +58,7 @@ export async function GET() {
     return NextResponse.json(clients);
   } catch (error) {
     console.error("Error fetching clients:", error);
-    return NextResponse.json(
-      { error: "Error al obtener clientes" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Error al obtener clientes" }, { status: 500 });
   }
 }
 
@@ -61,25 +67,39 @@ export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions);
     
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "No autorizado" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
     const { name } = await req.json();
 
     if (!name || typeof name !== "string" || !name.trim()) {
-      return NextResponse.json(
-        { error: "Nombre inválido" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Nombre inválido" }, { status: 400 });
     }
 
     const newClient = await prisma.client.create({
       data: {
         name: name.trim(),
         creatorId: session.user.id,
+        accesses: {
+          create: {
+            userId: session.user.id,
+            state: "accepted",
+            joinedAt: new Date(),
+            permissions: {
+              create: [
+                { scope: "users", action: "invite", allowed: true },
+                { scope: "users", action: "remove", allowed: true },
+                { scope: "users", action: "grant", allowed: true },
+                { scope: "processes", action: "edit", allowed: true },
+                { scope: "processes", action: "delete", allowed: true },
+                { scope: "processes", action: "create", allowed: true },
+                { scope: "documents", action: "edit", allowed: true },
+                { scope: "documents", action: "delete", allowed: true },
+                { scope: "documents", action: "create", allowed: true },
+              ]
+            }
+          }
+        }
       },
       include: {
         accesses: {
@@ -87,10 +107,25 @@ export async function POST(req: NextRequest) {
             userId: session.user.id
           },
           select: {
-            canEdit: true,
-            canDelete: true,
-            canCreate: true,
-            userId: true
+            id: true,
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                imageUrl: true,
+                imageId: true,
+              }
+            },
+            state: true,
+            joinedAt: true,
+            permissions: {
+              select: {
+                scope: true,
+                action: true,
+                allowed: true
+              }
+            }
           }
         }
       }
@@ -99,9 +134,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(newClient);
   } catch (error) {
     console.error("Error creando cliente:", error);
-    return NextResponse.json(
-      { error: "Error al crear cliente" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Error al crear cliente" }, { status: 500 });
   }
 }
+
